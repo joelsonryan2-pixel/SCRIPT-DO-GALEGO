@@ -1,1 +1,305 @@
-# SCRIPT-DO-GALEGO
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Player = game.Players.LocalPlayer
+
+local Window = Rayfield:CreateWindow({
+    Name = "Script do Galego",
+    LoadingTitle = "Carregando...",
+    LoadingSubtitle = "by Galego",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "ScriptDoGalego",
+        FileName = "Config"
+    },
+    KeySystem = false,
+})
+
+local Tab = Window:CreateTab("Menu", 4483362458)
+
+local function GetHumanoid()
+    local Character = Player.Character or Player.CharacterAdded:Wait()
+    return Character:WaitForChild("Humanoid")
+end
+
+-- VELOCIDADE
+Tab:CreateButton({
+    Name = "Ganhar Velocidade",
+    Callback = function()
+        GetHumanoid().WalkSpeed = 50
+
+        Rayfield:Notify({
+            Title = "Velocidade",
+            Content = "Você ficou rápido!",
+            Duration = 3,
+            Image = 4483362458,
+        })
+    end,
+})
+
+-- PULO
+Tab:CreateButton({
+    Name = "Pulo Alto",
+    Callback = function()
+        GetHumanoid().JumpPower = 100
+    end,
+})
+
+-- TOGGLE SPEED
+Tab:CreateToggle({
+    Name = "Auto Speed",
+    CurrentValue = false,
+    Flag = "AutoSpeed",
+
+    Callback = function(Value)
+        if Value then
+            GetHumanoid().WalkSpeed = 100
+        else
+            GetHumanoid().WalkSpeed = 16
+        end
+    end,
+})
+
+-- SLIDER
+Tab:CreateSlider({
+    Name = "Velocidade",
+    Range = {16, 200},
+    Increment = 1,
+    Suffix = "Speed",
+    CurrentValue = 16,
+    Flag = "SpeedSlider",
+
+    Callback = function(Value)
+        GetHumanoid().WalkSpeed = Value
+    end,
+})
+
+-- COLOR PICKER
+Tab:CreateColorPicker({
+    Name = "Cor da Interface",
+    Color = Color3.fromRGB(255,0,0),
+    Flag = "CorUI",
+
+    Callback = function(Value)
+        print("Nova cor:", Value)
+    end,
+})
+
+-- ===== ESP FUNCIONAL COM TEAM CHECK =====
+
+local ESPAtivado = false
+local TeamCheck = true
+
+local function AdicionarESP(PlayerAlvo)
+    if PlayerAlvo == Player then return end
+
+    local function Criar()
+        if not ESPAtivado then return end
+
+        local Character = PlayerAlvo.Character
+        if not Character then return end
+
+        local HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")
+        if not HumanoidRootPart then return end
+
+        if Character:FindFirstChild("GalegoESP") then
+            Character.GalegoESP:Destroy()
+        end
+
+        if TeamCheck and Player.Team == PlayerAlvo.Team then
+            return
+        end
+
+        local Highlight = Instance.new("Highlight")
+        Highlight.Name = "GalegoESP"
+        Highlight.FillColor = Color3.fromRGB(255, 0, 0)
+        Highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        Highlight.FillTransparency = 0.5
+        Highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        Highlight.Adornee = Character
+        Highlight.Parent = Character
+    end
+
+    PlayerAlvo.CharacterAdded:Connect(function()
+        task.wait(1)
+        Criar()
+    end)
+
+    Criar()
+end
+
+-- TOGGLE ESP
+Tab:CreateToggle({
+    Name = "ESP",
+    CurrentValue = false,
+    Flag = "ESP",
+
+    Callback = function(Value)
+        ESPAtivado = Value
+
+        if Value then
+            for _, v in pairs(game.Players:GetPlayers()) do
+                AdicionarESP(v)
+            end
+        else
+            for _, v in pairs(game.Players:GetPlayers()) do
+                if v.Character and v.Character:FindFirstChild("GalegoESP") then
+                    v.Character.GalegoESP:Destroy()
+                end
+            end
+        end
+    end,
+})
+
+-- TEAM CHECK
+Tab:CreateToggle({
+    Name = "Team Check",
+    CurrentValue = true,
+    Flag = "TeamCheck",
+
+    Callback = function(Value)
+        TeamCheck = Value
+
+        if ESPAtivado then
+            for _, v in pairs(game.Players:GetPlayers()) do
+                if v.Character and v.Character:FindFirstChild("GalegoESP") then
+                    v.Character.GalegoESP:Destroy()
+                end
+
+                AdicionarESP(v)
+            end
+        end
+    end,
+})
+
+-- ===== AIMBOT COM TEAM CHECK + VISIBLE CHECK =====
+
+local AimbotAtivado = false
+local TeamCheckAimbot = true
+local VisibleCheck = true
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+
+local LocalPlayer = Players.LocalPlayer
+
+local function IsVisible(Target)
+    if not Target.Character then return false end
+
+    local Head = Target.Character:FindFirstChild("Head")
+    if not Head then return false end
+
+    local Origin = Camera.CFrame.Position
+    local Direction = (Head.Position - Origin)
+
+    local Params = RaycastParams.new()
+    Params.FilterType = Enum.RaycastFilterType.Blacklist
+    Params.FilterDescendantsInstances = {
+        LocalPlayer.Character,
+        Target.Character
+    }
+
+    local Result = workspace:Raycast(
+        Origin,
+        Direction,
+        Params
+    )
+
+    if Result then
+        return false
+    end
+
+    return true
+end
+
+local function GetClosestPlayer()
+    local Closest = nil
+    local ShortestDistance = math.huge
+
+    for _, v in pairs(Players:GetPlayers()) do
+        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("Head") then
+
+            local Humanoid = v.Character:FindFirstChild("Humanoid")
+
+            if Humanoid and Humanoid.Health > 0 then
+
+                if TeamCheckAimbot and v.Team == LocalPlayer.Team then
+                    continue
+                end
+
+                if VisibleCheck and not IsVisible(v) then
+                    continue
+                end
+
+                local Head = v.Character.Head
+
+                local Position, Visible = Camera:WorldToViewportPoint(Head.Position)
+
+                if Visible then
+                    local Distance = (
+                        Vector2.new(Position.X, Position.Y)
+                        - Vector2.new(
+                            Camera.ViewportSize.X / 2,
+                            Camera.ViewportSize.Y / 2
+                        )
+                    ).Magnitude
+
+                    if Distance < ShortestDistance then
+                        ShortestDistance = Distance
+                        Closest = v
+                    end
+                end
+            end
+        end
+    end
+
+    return Closest
+end
+
+RunService.RenderStepped:Connect(function()
+    if AimbotAtivado then
+
+        local Target = GetClosestPlayer()
+
+        if Target and Target.Character and Target.Character:FindFirstChild("Head") then
+
+            Camera.CFrame = CFrame.new(
+                Camera.CFrame.Position,
+                Target.Character.Head.Position
+            )
+        end
+    end
+end)
+
+-- TOGGLE AIMBOT
+Tab:CreateToggle({
+    Name = "Aimbot",
+    CurrentValue = false,
+    Flag = "Aimbot",
+
+    Callback = function(Value)
+        AimbotAtivado = Value
+    end,
+})
+
+-- TEAM CHECK AIMBOT
+Tab:CreateToggle({
+    Name = "Team Check Aimbot",
+    CurrentValue = true,
+    Flag = "TeamCheckAimbot",
+
+    Callback = function(Value)
+        TeamCheckAimbot = Value
+    end,
+})
+
+-- VISIBLE CHECK
+Tab:CreateToggle({
+    Name = "Visible Check",
+    CurrentValue = true,
+    Flag = "VisibleCheck",
+
+    Callback = function(Value)
+        VisibleCheck = Value
+    end,
+})
