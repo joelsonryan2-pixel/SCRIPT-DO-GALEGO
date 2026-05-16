@@ -301,5 +301,103 @@ Tab:CreateToggle({
 
     Callback = function(Value)
         VisibleCheck = Value
+        -- ===== FLY FUNCIONAL =====
+
+local FlyAtivado = false
+local FlySpeed = 50
+
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local BodyVelocity
+local BodyGyro
+
+local function StartFly()
+    local Character = Player.Character or Player.CharacterAdded:Wait()
+    local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+
+    BodyVelocity = Instance.new("BodyVelocity")
+    BodyVelocity.MaxForce = Vector3.new(999999,999999,999999)
+    BodyVelocity.Velocity = Vector3.zero
+    BodyVelocity.Parent = HumanoidRootPart
+
+    BodyGyro = Instance.new("BodyGyro")
+    BodyGyro.MaxTorque = Vector3.new(999999,999999,999999)
+    BodyGyro.P = 1000
+    BodyGyro.CFrame = workspace.CurrentCamera.CFrame
+    BodyGyro.Parent = HumanoidRootPart
+
+    RunService:BindToRenderStep("Fly", Enum.RenderPriority.Character.Value, function()
+        local Camera = workspace.CurrentCamera
+        local MoveDirection = Vector3.zero
+
+        if UIS:IsKeyDown(Enum.KeyCode.W) then
+            MoveDirection += Camera.CFrame.LookVector
+        end
+        if UIS:IsKeyDown(Enum.KeyCode.S) then
+            MoveDirection -= Camera.CFrame.LookVector
+        end
+        if UIS:IsKeyDown(Enum.KeyCode.A) then
+            MoveDirection -= Camera.CFrame.RightVector
+        end
+        if UIS:IsKeyDown(Enum.KeyCode.D) then
+            MoveDirection += Camera.CFrame.RightVector
+        end
+        if UIS:IsKeyDown(Enum.KeyCode.Space) then
+            MoveDirection += Vector3.new(0,1,0)
+        end
+        if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then
+            MoveDirection -= Vector3.new(0,1,0)
+        end
+
+        BodyVelocity.Velocity = MoveDirection * FlySpeed
+        BodyGyro.CFrame = Camera.CFrame
+    end)
+end
+
+local function StopFly()
+    RunService:UnbindFromRenderStep("Fly")
+
+    if BodyVelocity then
+        BodyVelocity:Destroy()
+        BodyVelocity = nil
+    end
+
+    if BodyGyro then
+        BodyGyro:Destroy()
+        BodyGyro = nil
+    end
+end
+
+-- TOGGLE FLY
+Tab:CreateToggle({
+    Name = "Fly",
+    CurrentValue = false,
+    Flag = "Fly",
+
+    Callback = function(Value)
+        FlyAtivado = Value
+
+        if Value then
+            StartFly()
+        else
+            StopFly()
+        end
+    end,
+})
+
+-- SLIDER VELOCIDADE DO FLY
+Tab:CreateSlider({
+    Name = "Fly Speed",
+    Range = {10, 200},
+    Increment = 5,
+    Suffix = "FlySpeed",
+    CurrentValue = 50,
+    Flag = "FlySpeed",
+
+    Callback = function(Value)
+        FlySpeed = Value
+    end,
+})
     end,
 })
